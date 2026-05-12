@@ -1,0 +1,30 @@
+{
+  "chase_debit": {
+    "types": ["LOAN_PMT", "ACCT_XFER", "CHASE_TO_PARTNERFI", "PARTNERFI_TO_CHASE"],
+    "type_plus_description": {
+      "ACH_DEBIT": ["CHASE CREDIT CRD AUTOPAY"],
+      "MISC_DEBIT": ["AMERICAN EXPRESS ACH PMT", "Discover", "SoFi", "ROBINHOOD", "Moomoo"],
+      "MISC_CREDIT": ["SoFi Bank", "Moomoo", "Discover", "ROBINHOOD"]
+    }
+  },
+  "discover_debit": {
+    "description_contains": ["DISCOVER E-PAYMENT", "ROBINHOOD DEBITS", "MOOMOO", "SOFI"]
+  },
+  "chase_sapphire": {
+    "type_equals": ["Payment"]
+  },
+  "chase_freedom_flex": {
+    "type_equals": ["Payment"]
+  },
+  "discover_credit": {
+    "description_contains": ["INTERNET PAYMENT - THANK YOU", "DIRECTPAY", "CASHBACK BONUS REDEMPTION", "AUTOMATIC PAYMENT"]
+  },
+  "sofi_checking": {
+    "types": ["DIRECT_DEPOSIT", "INTEREST_EARNED"],
+    "description_contains": ["To Savings", "From Savings", "JPMORGAN CHASE", "Discover", "American Express", "ROBINHOOD", "Moomoo"]
+  },
+  "sofi_savings": {
+    "types": ["DIRECT_DEPOSIT", "INTEREST_EARNED"],
+    "description_contains": ["To Checking", "From Checking", "JPMORGAN CHASE"]
+  }
+}

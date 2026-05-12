@@ -1,0 +1,12 @@
+[project]
+name = "budget-viz"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "openai>=2.36.0",
+    "pandas>=3.0.3",
+    "plotly>=6.7.0",
+    "pyarrow>=24.0.0",
+    "python-dotenv>=1.2.2",
+    "streamlit>=1.57.0",
+]
