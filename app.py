@@ -20,14 +20,32 @@ def latest_mtime(root: Path):
 st.title("Budget Viz — raw merged transactions")
 
 df = load(latest_mtime(STATEMENTS_DIR))
+spending = df[~df["is_transfer"]]
+transfers = df[df["is_transfer"]]
 
-c1, c2, c3 = st.columns(3)
-c1.metric("Rows", f"{len(df):,}")
-c2.metric("Sources", df["source"].nunique())
-c3.metric("Date range", f"{df['date'].min()} → {df['date'].max()}")
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Total rows", f"{len(df):,}")
+c2.metric("Spending rows", f"{len(spending):,}")
+c3.metric("Transfer rows", f"{len(transfers):,}")
+c4.metric("Sources", df["source"].nunique())
 
 st.subheader("Rows per source")
-st.dataframe(df.groupby("source").size().rename("rows").reset_index())
+per_source = (
+    df.assign(kind=df["is_transfer"].map({True: "transfer", False: "spending"}))
+    .pivot_table(index="source", columns="kind", values="amount", aggfunc="size", fill_value=0)
+    .reset_index()
+)
+st.dataframe(per_source, use_container_width=True)
 
-st.subheader("All transactions")
-st.dataframe(df, use_container_width=True, height=600)
+with st.expander(f"Transfers panel ({len(transfers)} rows) — sanity check", expanded=False):
+    st.caption("Rows flagged as account-to-account moves. Excluded from spending totals.")
+    st.dataframe(
+        transfers[["date", "source", "description", "amount", "transfer_layer"]],
+        use_container_width=True,
+        height=400,
+    )
+
+st.subheader(f"Spending transactions ({len(spending):,} rows)")
+show_transfers = st.checkbox("Include transfers in table", value=False)
+table = df if show_transfers else spending
+st.dataframe(table, use_container_width=True, height=600)

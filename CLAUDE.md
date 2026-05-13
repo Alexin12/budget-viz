@@ -129,6 +129,28 @@ PayPal double-records every card-funded payment. Rules:
 - One concrete change at a time.
 - Need to do tests after each one step is finished, and return "This step has been tested!"
 
+## Git Workflow
+- Need to make commit after each step get approved
+- Tell user what you have tested before you make any commitment.
+- Commit message should be simple and clear structured with one big change and several bullet points
+- Each bullet point in the commit body must be on its own line, separated from the next bullet by a blank line so they render as distinct paragraphs (not wrapped together).
+- Example:
+
+  ```
+  feat: short subject
+
+  - First bullet describing one change.
+
+  - Second bullet describing another change.
+
+  - Third bullet describing verification or test results.
+  ```
+
+
 ## Gitignore
 
 `data/`, `.env`, `.superpowers/`, `__pycache__/`, `.venv/`, `.DS_Store`. Keep `Card Statements/` ignored too (real financial data).
+
+
+## Update plan
+- Need to update plan.md every time you finish a task
