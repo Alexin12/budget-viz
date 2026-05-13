@@ -224,14 +224,23 @@ Streamlit caches the result with `@st.cache_data` keyed by the max mtime under `
 
 ## Build Sequence
 
-1. **Skeleton**: `uv init`, deps, folder layout, `.env.example`, `.gitignore`, seed `config/` files.
-2. **Parsers** — one per source, working from the existing sample files in `Card Statements/`. Verify row counts against each file. Sapphire is the first to wire end-to-end.
-3. **Pipeline (no transfers, no categorization)** — show raw merged data in a stub Streamlit page.
-4. **Transfer detection** — Layer 1 rules, then Layer 2 pairing. Show transfers panel; user sanity-checks.
-5. **PayPal dedup** — run before/after diff to verify which PayPal rows get dropped.
-6. **Categorization** — OpenAI + cache. Spot-check 20 random non-transfer rows.
-7. **Full dashboard** — 4 charts + filters + inline override.
-8. **Polish** — handle missing API key, empty months, malformed files.
+Legend: `[x]` done · `[~]` in progress · `[ ]` not started. Strikethrough = fully complete.
+
+1. [x] ~~**Skeleton**: `uv init`, deps, folder layout, `.env.example`, `.gitignore`, seed `config/` files.~~ (commit `46cae85`)
+2. [x] ~~**Parsers** — one per source, working from the existing sample files in `Card Statements/`. Verify row counts against each file. Sapphire is the first to wire end-to-end.~~
+   - [x] ~~`chase_credit.py` (Sapphire 3209 + Freedom Flex 5878) — commit `6ea8a8f`~~
+   - [x] ~~`chase_debit.py` (8290)~~
+   - [x] ~~`discover_credit.py`~~
+   - [x] ~~`discover_debit.py`~~
+   - [x] ~~`amex.py`~~
+   - [x] ~~`paypal.py`~~
+   - [x] ~~`sofi.py` (checking + savings)~~
+3. [ ] **Pipeline (no transfers, no categorization)** — show raw merged data in a stub Streamlit page.
+4. [ ] **Transfer detection** — Layer 1 rules, then Layer 2 pairing. Show transfers panel; user sanity-checks.
+5. [ ] **PayPal dedup** — run before/after diff to verify which PayPal rows get dropped.
+6. [ ] **Categorization** — OpenAI + cache. Spot-check 20 random non-transfer rows.
+7. [ ] **Full dashboard** — 4 charts + filters + inline override.
+8. [ ] **Polish** — handle missing API key, empty months, malformed files.
 
 ## Verification
 
