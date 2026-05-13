@@ -235,7 +235,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started. Strikethrough = fu
    - [x] ~~`amex.py`~~
    - [x] ~~`paypal.py`~~
    - [x] ~~`sofi.py` (checking + savings)~~
-3. [ ] **Pipeline (no transfers, no categorization)** — show raw merged data in a stub Streamlit page.
+3. [x] ~~**Pipeline (no transfers, no categorization)** — show raw merged data in a stub Streamlit page.~~
 4. [ ] **Transfer detection** — Layer 1 rules, then Layer 2 pairing. Show transfers panel; user sanity-checks.
 5. [ ] **PayPal dedup** — run before/after diff to verify which PayPal rows get dropped.
 6. [ ] **Categorization** — OpenAI + cache. Spot-check 20 random non-transfer rows.
