@@ -19,7 +19,7 @@ def latest_mtime(root: Path):
 
 st.title("Budget Viz — raw merged transactions")
 
-df = load(latest_mtime(STATEMENTS_DIR))
+df, paypal_dropped = load(latest_mtime(STATEMENTS_DIR))
 spending = df[~df["is_transfer"]]
 transfers = df[df["is_transfer"]]
 
@@ -36,6 +36,21 @@ per_source = (
     .reset_index()
 )
 st.dataframe(per_source, use_container_width=True)
+
+with st.expander(f"PayPal dropped rows ({len(paypal_dropped)}) — internal + cross-card", expanded=False):
+    st.caption(
+        "Rows removed before transfer tagging. `paypal_internal` = PayPal accounting noise "
+        "(pending, card-deposit offsets, etc.). `paypal_cross_card` = duplicate of a card row "
+        "with PAYPAL in the description."
+    )
+    if len(paypal_dropped):
+        st.dataframe(
+            paypal_dropped[["date", "description", "amount", "raw_type", "raw_status", "drop_reason"]],
+            use_container_width=True,
+            height=400,
+        )
+    else:
+        st.write("No PayPal rows dropped.")
 
 with st.expander(f"Transfers panel ({len(transfers)} rows) — sanity check", expanded=False):
     st.caption("Rows flagged as account-to-account moves. Excluded from spending totals.")
