@@ -2,7 +2,7 @@
   "chase_debit": {
     "types": ["LOAN_PMT", "ACCT_XFER", "CHASE_TO_PARTNERFI", "PARTNERFI_TO_CHASE", "WIRE_INCOMING", "WIRE_OUTGOING"],
     "type_plus_description": {
-      "ACH_DEBIT": ["CHASE CREDIT CRD AUTOPAY"],
+      "ACH_DEBIT": ["CHASE CREDIT CRD AUTOPAY", "DISCOVER         E-PAYMENT", "DISCOVER E-PAYMENT"],
       "MISC_DEBIT": ["AMERICAN EXPRESS ACH PMT", "Discover", "SoFi", "ROBINHOOD", "Moomoo", "FID BKG SVC", "Fidelity", "VENMO"],
       "MISC_CREDIT": ["SoFi Bank", "Moomoo", "Discover", "ROBINHOOD", "FID BKG SVC", "Fidelity", "VENMO"],
       "DEBIT_CARD": ["ASTRA*Moomoo", "ASTRA*MOOMOO"]
@@ -10,7 +10,7 @@
     "description_contains": ["BOOK TRANSFER CREDIT B/O", "PENSACOLA STATE  DIR DEP", "ODP TRANSFER FROM SAVINGS", "Cash Redemption", "DepositCloud", "DEPOSITCLOUD", "Zelle payment from", "Zelle payment to", "Pen Air CU", "ASTRA*Moomoo", "ASTRA*MOOMOO"]
   },
   "discover_debit": {
-    "description_contains": ["DISCOVER E-PAYMENT", "ROBINHOOD", "MOOMOO", "SOFI", "FID BKG SVC", "JPMORGAN CHASE BANK", "PAYPAL INST XFER", "VENMO", "PENSACOLA STATE", "PAYROLL ACH", "Zelle Payment To", "Zelle Payment From", "ASTRA*Moomoo"]
+    "description_contains": ["DISCOVER E-PAYMENT", "ROBINHOOD", "MOOMOO", "SOFI", "FID BKG SVC", "JPMORGAN CHASE BANK", "PAYPAL INST XFER", "VENMO", "PENSACOLA STATE", "PAYROLL ACH", "Zelle Payment To", "Zelle Payment From", "ASTRA*Moomoo", "PAYPAL *ADD TO"]
   },
   "amex": {
     "description_contains": ["MOBILE PAYMENT - THANK YOU", "PAYMENT - THANK YOU", "AUTOPAY PAYMENT"]

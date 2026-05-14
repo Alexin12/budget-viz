@@ -55,46 +55,35 @@ Examples:
 
 ---
 
-## [ ] 3. Improve Category Structure
+## [x] ~~3. Improve Category Structure~~
 
-Avoid putting too many transactions into `Other`.
+The slash-grouped names in the original spec ("Housing / Utilities", "Transportation / Gas / Car", "Education / AI", "Other / Personal") are SINGLE merged categories at the data layer, not display groups over granular data. Implemented as 11 categories in `src/categorize.py` plus the special `transfer` tag.
 
-Use 6-8 major spending categories for the main dashboard, and group the remaining categories into `Other`.
+Final category list:
 
-Recommended primary categories:
-
-- Housing / Utilities
-- Grocery
-- Food / Dining
-- Transportation / Gas / Car
-- Shopping
-- Education / AI
-- Entertainment
-- Health
-- Travel
-- Transfers
-- Other / Personal
-
-
-### Category Notes
-
-`Travel` should include:
-
-- Hotels
-- Flights
-- Tickets for visits or activities outside of Pensacola
-
-`Other / Personal` should include:
-
-- HOPE IMMIGRATION
-- TABEA LAW PC
-- API-related transactions
-- LLM model subscription fee
-- Phone-related payments, such as:
-
-| Account | Description |
+| Category | Includes |
 |---|---|
-| discover_debit | IPHONE CITIZENS |
+| `housing` | Rent (Governors Gate), electricity (FPL), internet, water, Lemonade home insurance, recurring household services (`PY ONELINK USA`, `PY ZENTRO`) |
+| `grocery` | Whole Foods, Publix, Costco food, Aldi, Tony Food Market |
+| `dining` | Restaurants, coffee, fast food, DoorDash, UberEats, vending machines (Coca Cola, CPI R&R Vending, PMUSA) |
+| `transportation` | Gas (Circle K, Shell, Chevron, 7-Eleven), car loans (Mazda Financial, MFSUSA), **ALL State Farm rows (auto insurance)**, GEICO, Progressive, auto repair, body shops, parts, DMV / tag / license, tolls (NTTA, HCTRA), parking permits |
+| `shopping` | Amazon, Target, Walmart, clothing, electronics, CVS, Walgreens, general retail, office furniture, home goods, **`PAYPAL *PYPL PAYIN4` (BNPL installments for retail purchases)** |
+| `education` | AI services and developer APIs (Anthropic, Claude, OpenAI, ChatGPT, OpenRouter, Cursor, Perplexity, Immersive Translate, GitHub Copilot), online courses (Udemy, Coursera, Skillshare), graduate school applications, academic fees |
+| `entertainment` | Netflix, Spotify, Kindle, Audible, streaming, YouTube Premium, Google One, games, PlayStation, concerts (Ticketmaster, StubHub, Vivid Seats), AMC, Apple Services, WSJ, Medium, gym, tennis |
+| `health` | Doctor, clinic, hospital, MinuteClinic, Sacred Heart, urgent care, dentist, Aspen Dental, vision (America's Best), pharmacies (standalone, not CVS shopping), medical labs (Quest Diagnostics, Touchstone Imaging, Vivid Pathology), health insurance |
+| `travel` | Hotels, flights, Airbnb, Uber, Lyft, transit, MTA, parking for trips, tickets for visits or activities **outside of Pensacola**, theme parks, museums outside Pensacola |
+| `personal` | Phone bills (Visible, IPHONE CITIZENS, AT&T, Verizon, T-Mobile), haircuts (Supercuts, Sport Clips, salons), spa, nail, massage, dry cleaning, laundry, USPS / UPS Store, immigration law (HOPE IMMIGRATION, AFP HOPE IMMIGRATION), general legal services (TABEA LAW, Rifkin & Fox-Isicoff, attorneys), pet boarding, bank fees (monthly service fee, wire fee, FX adjustment fee, late fee, annual membership fee), any genuinely unclear merchant |
+| `taxes` | IRS, state tax, franchise tax |
+| `transfer` | Special — not in spending totals. Set by `src/transfers.py`. |
+
+### PayPal-prefix handling
+
+If a signature starts with `PAYPAL `, ignore the PAYPAL prefix and classify by the merchant after it (e.g. `PAYPAL GOOGLE` → entertainment, `PAYPAL UDEMY` → education, `PAYPAL VISIBLESERV` → personal, `PAYPAL *PYPL PAYIN4` → shopping).
+
+### Migration notes
+
+- Cache (`data/category_cache.json`) was migrated: `utilities` → `housing`; `gas` and `car` → `transportation`; `ai` → `education`; `other` entries were cleared so the LLM reclassifies them under the new prompt.
+- Pipeline-level transfer rules also extended during this step: `DISCOVER E-PAYMENT` (chase_debit `ACH_DEBIT` paying Discover credit) and `PAYPAL *ADD TO` (PayPal balance funding) now correctly land as `transfer`.
 
 ---
 

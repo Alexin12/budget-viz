@@ -12,17 +12,16 @@ CACHE_PATH = ROOT / "data" / "category_cache.json"
 
 CATEGORIES = [
     "grocery",
-    "gas",
+    "dining",
     "shopping",
     "travel",
-    "dining",
-    "utilities",
     "entertainment",
+    "health",
     "housing",
+    "transportation",
+    "education",
+    "personal",
     "taxes",
-    "car",
-    "ai",
-    "other",
 ]
 
 MODEL = "gpt-4o-mini"
@@ -80,18 +79,18 @@ def _classify_batch(client: OpenAI, signatures: list[str]) -> dict[str, str]:
         "Classify each merchant signature into one of these categories: "
         f"{cat_list}.\n"
         "Rules:\n"
-        "- rent / mortgage / property management / HOA -> housing\n"
-        "- IRS / state tax / franchise tax -> taxes\n"
-        "- electricity / water / internet / phone / home insurance / auto insurance (GEICO, State Farm, Progressive) -> utilities\n"
-        "- restaurants / coffee / fast food / food delivery (DoorDash, UberEats) -> dining\n"
         "- supermarkets / Whole Foods / Trader Joe's / Publix / Costco food / Aldi / Tony Food Market -> grocery\n"
-        "- gas stations / EV charging / Shell / Circle K / Chevron / 7-Eleven gas -> gas\n"
-        "- flights / hotels / Airbnb / Uber / Lyft / transit / MTA / parking -> travel\n"
-        "- Netflix / Spotify / Kindle / Kindle Unlimited / Audible / streaming / YouTube Premium / Google One / video games / PlayStation / concerts (Ticketmaster, StubHub, Vivid Seats) / cinema (AMC) / Patreon / Apple Services / Apple.com (App Store, iCloud, Apple Music, Apple TV) / Udemy / online courses / museums / theaters / gym / tennis -> entertainment\n"
-        "- Amazon / Target / Walmart / clothing / electronics retail / CVS / Walgreens -> shopping\n"
-        "- car loans (Mazda Financial, Toyota Financial), auto insurance (GEICO, Progressive, State Farm Auto), auto repair, parts (Advance Auto, AutoZone), DMV / tag / license -> car\n"
-        "- AI services and developer APIs ONLY: Anthropic, Claude, OpenAI, ChatGPT, OpenRouter, Cursor, Perplexity, Immersive Translate, GitHub Copilot. Do NOT put Apple Services, Kindle, Spotify, YouTube, Google One, or Udemy here -> ai\n"
-        "- anything unclear -> other\n"
+        "- restaurants / coffee / fast food / food delivery (DoorDash, UberEats) / vending machines (Coca Cola, CPI R&R Vending, PMUSA) -> dining\n"
+        "- Amazon / Target / Walmart / clothing / electronics retail / CVS / Walgreens / general retail / office furniture / home goods -> shopping\n"
+        "- flights / hotels / Airbnb / Uber / Lyft / transit / MTA / parking / tickets for trips outside Pensacola / theme parks / museums OUTSIDE Pensacola -> travel\n"
+        "- Netflix / Spotify / Kindle / Kindle Unlimited / Audible / streaming / YouTube Premium / Google One / video games / PlayStation / concerts (Ticketmaster, StubHub, Vivid Seats) / cinema (AMC) / Patreon / Apple Services / Apple.com (App Store, iCloud, Apple Music, Apple TV) / WSJ / news subscriptions / Medium / gym / tennis -> entertainment\n"
+        "- doctor / clinic / hospital / MinuteClinic / Sacred Heart / urgent care / dentist / Aspen Dental / vision (America's Best, LensCrafters) / pharmacy when standalone (not CVS/Walgreens shopping) / medical labs (Quest Diagnostics, Touchstone Imaging, Vivid Pathology) / health insurance -> health\n"
+        "- rent / mortgage / property management / HOA / Governors Gate / electricity / water / internet / Lemonade home insurance / recurring household services (PY ONELINK USA, PY ZENTRO and similar recurring service charges) -> housing\n"
+        "- gas stations / EV charging / Shell / Circle K / Chevron / 7-Eleven gas / car loans (Mazda Financial, Toyota Financial) / ALL State Farm rows (auto insurance) / GEICO / Progressive / auto repair / body shops (Gross & Son Paint & Body) / parts (Advance Auto, AutoZone) / DMV / tag / license / tolls (NTTA, HCTRA, DSI NTTA) / parking permits -> transportation\n"
+        "- AI services and developer APIs (Anthropic, Claude, OpenAI, ChatGPT, OpenRouter, Cursor, Perplexity, Immersive Translate, GitHub Copilot) / online courses (Udemy, Coursera, Skillshare) / graduate school applications / academic fees -> education\n"
+        "- phone bills (Visible, IPHONE CITIZENS, VISIBLE SERVICE LLC, AT&T, Verizon, T-Mobile) / haircuts (Supercuts, Sport Clips, salons) / spa / nail / massage / dry cleaning / laundry / USPS / UPS Store / immigration law (HOPE IMMIGRATION, AFP HOPE IMMIGRATION) / general legal services (TABEA LAW, Rifkin & Fox-Isicoff, attorneys) / pet boarding / bank fees (monthly service fee, wire fee, foreign exchange adjustment fee, late fee, annual membership fee) / any genuinely unclear merchant -> personal\n"
+        "- IRS / state tax / franchise tax -> taxes\n"
+        "IMPORTANT: If a signature starts with 'PAYPAL ' (PayPal-funded purchase), IGNORE the PAYPAL prefix and classify by the merchant name after it. Examples: 'PAYPAL GOOGLE' = Google service (entertainment); 'PAYPAL MEDIUM.COM' = Medium subscription (entertainment); 'PAYPAL WSJ' = WSJ (entertainment); 'PAYPAL UDEMY' = Udemy course (education); 'PAYPAL VISIBLESERV' = Visible phone (personal); 'PAYPAL SPOTIFY' = Spotify (entertainment); 'PAYPAL PYPL PAYIN4' = Pay-in-4 BNPL installments for a retail purchase -> shopping.\n"
         "Return strict JSON: an object mapping each input signature (exact string) to its category.\n\n"
         "Signatures:\n" + "\n".join(f"- {s}" for s in signatures)
     )
@@ -106,7 +105,7 @@ def _classify_batch(client: OpenAI, signatures: list[str]) -> dict[str, str]:
     for sig in signatures:
         cat = data.get(sig)
         if cat not in CATEGORIES:
-            cat = "other"
+            cat = "personal"
         out[sig] = cat
     return out
 
@@ -137,8 +136,8 @@ def categorize(df: pd.DataFrame, dry_run: bool = False) -> pd.DataFrame:
         save_cache(cache)
         df.loc[needs_llm_mask & (df["category"] == ""), "category"] = df.loc[
             needs_llm_mask & (df["category"] == ""), "signature"
-        ].map(lambda s: cache.get(s, "other"))
+        ].map(lambda s: cache.get(s, "personal"))
 
     df.loc[df["is_transfer"], "category"] = "transfer"
-    df.loc[df["category"] == "", "category"] = "other"
+    df.loc[df["category"] == "", "category"] = "personal"
     return df
