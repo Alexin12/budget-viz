@@ -159,6 +159,7 @@ else:
     )
     top_n = 6
     major = set(totals.head(top_n).index)
+    other_cats = [c for c in totals.index if c not in major]
     monthly_cat["category"] = monthly_cat["category"].where(
         monthly_cat["category"].isin(major), "other"
     )
@@ -167,6 +168,9 @@ else:
     )
     monthly_cat = monthly_cat.sort_values("month")
     monthly_cat["month_label"] = monthly_cat["month"].dt.strftime("%Y-%m")
+    month_totals = monthly_cat.groupby("month")["amount"].transform("sum")
+    monthly_cat["pct"] = monthly_cat["amount"] / month_totals * 100
+    monthly_cat["pct_label"] = monthly_cat["pct"].map(lambda p: f"{p:.1f}%")
     month_order = (
         monthly_cat.sort_values("month")["month_label"].drop_duplicates().tolist()
     )
@@ -181,11 +185,30 @@ else:
         barmode="stack",
         title="Monthly spending by category (top 6 + other)",
         category_orders={"month_label": month_order, "category": category_order},
+        text="pct_label",
+        custom_data=["pct"],
+    )
+    fig_stack.update_traces(
+        textposition="inside",
+        insidetextanchor="middle",
+        textfont_size=11,
+        hovertemplate=(
+            "%{x}<br>%{fullData.name}: $%{y:,.2f} "
+            "(%{customdata[0]:.1f}%)<extra></extra>"
+        ),
     )
     fig_stack.update_yaxes(tickformat="$,.0f", title="Spending")
     fig_stack.update_xaxes(title="Month")
-    fig_stack.update_layout(legend_title_text="Category")
+    fig_stack.update_layout(legend_title_text="Category", uniformtext_minsize=8, uniformtext_mode="hide")
     st.plotly_chart(fig_stack, width='stretch')
+    if other_cats:
+        other_totals = totals.loc[other_cats]
+        other_note = ", ".join(
+            f"{c}: \\${v:,.2f}" for c, v in other_totals.items()
+        )
+        st.caption(f"**Other** includes: {other_note}")
+    else:
+        st.caption("**Other** is empty — all categories fit in the top 6.")
 
 st.markdown("---")
 
