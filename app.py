@@ -55,7 +55,7 @@ month_mode = st.sidebar.radio(
 
 if month_mode == "Range":
     start_label, end_label = st.sidebar.select_slider(
-        "Month range",
+        "Month range (end exclusive)",
         options=month_labels,
         value=(default_start, default_end),
     )
@@ -63,8 +63,11 @@ if month_mode == "Range":
     end_month = pd.Timestamp(end_label)
     selected_months = [
         pd.Timestamp(m) for m in month_labels
-        if start_month <= pd.Timestamp(m) <= end_month
+        if start_month <= pd.Timestamp(m) < end_month
     ]
+    if not selected_months:
+        st.warning("Range is empty — end month is exclusive. Move the right handle one step further.")
+        st.stop()
 else:
     default_picks = month_labels[max(0, len(month_labels) - 6):]
     picked_labels = st.sidebar.multiselect(
@@ -295,15 +298,16 @@ window = st.radio(
     key="top_categories_window",
 )
 
-anchor = df["month"].max()
+anchor = max(selected_months) if selected_months else pd.NaT
 if pd.isna(anchor):
     st.info("No data available for top categories.")
 else:
     start = (anchor - pd.DateOffset(months=window - 1)).to_period("M").to_timestamp()
+    window_months = [m for m in selected_months if start <= m <= anchor]
     window_df = df[
-        (df["month"] >= start)
-        & (df["month"] <= anchor)
+        df["month"].isin(window_months)
         & (df["source"].isin(sel_sources))
+        & (df["category"].isin(sel_cats))
         & (~df["is_transfer"])
         & (~df["is_refund"])
     ]
