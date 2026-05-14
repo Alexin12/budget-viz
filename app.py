@@ -145,6 +145,33 @@ if not monthly_total.empty:
     )
     st.plotly_chart(fig_trend, width='stretch')
 
+    cat_avg = (
+        spending.groupby("category", as_index=False)["amount"].sum()
+    )
+    cat_avg["avg"] = cat_avg["amount"] / n_months
+    cat_avg = cat_avg[cat_avg["avg"] > 0].sort_values("avg", ascending=False)
+    if not cat_avg.empty:
+        fig_cat_avg = px.scatter(
+            cat_avg,
+            x="category",
+            y="avg",
+            size="avg",
+            color="category",
+            size_max=40,
+            title=f"Average monthly spending by category ({n_months} month{'s' if n_months != 1 else ''})",
+        )
+        fig_cat_avg.update_traces(
+            hovertemplate="%{x}<br>Avg: $%{y:,.2f}/mo<extra></extra>",
+        )
+        fig_cat_avg.update_xaxes(
+            title=None,
+            categoryorder="array",
+            categoryarray=cat_avg["category"].tolist(),
+        )
+        fig_cat_avg.update_yaxes(tickformat="$,.0f", title="Avg $/month")
+        fig_cat_avg.update_layout(height=380, showlegend=False)
+        st.plotly_chart(fig_cat_avg, width='stretch')
+
 st.markdown("---")
 
 # Chart 2 — Category Breakdown (stacked bar, top 6 + other)
