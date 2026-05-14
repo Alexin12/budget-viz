@@ -409,11 +409,31 @@ st.caption("Edit the `category` cell to override. Click *Save overrides* to pers
 
 table_src = in_range if show_transfers else spending
 display_cols = ["date", "source", "description", "amount", "category", "signature"]
-display = (
-    table_src[display_cols]
-    .sort_values("date", ascending=False)
-    .reset_index(drop=True)
-)
+table_src = table_src[display_cols].sort_values("date", ascending=False).reset_index(drop=True)
+
+month_series = table_src["date"].dt.strftime("%Y-%m")
+month_options = sorted(month_series.unique().tolist(), reverse=True)
+source_options = sorted(table_src["source"].dropna().unique().tolist())
+category_options = sorted(table_src["category"].dropna().unique().tolist())
+
+fc1, fc2, fc3 = st.columns(3)
+with fc1:
+    sel_months = st.multiselect("Month", month_options, default=[], placeholder="All months")
+with fc2:
+    sel_sources = st.multiselect("Source", source_options, default=[], placeholder="All sources")
+with fc3:
+    sel_categories = st.multiselect("Category", category_options, default=[], placeholder="All categories")
+
+mask = pd.Series(True, index=table_src.index)
+if sel_months:
+    mask &= month_series.isin(sel_months)
+if sel_sources:
+    mask &= table_src["source"].isin(sel_sources)
+if sel_categories:
+    mask &= table_src["category"].isin(sel_categories)
+
+display = table_src[mask].reset_index(drop=True)
+st.caption(f"Showing {len(display):,} of {len(table_src):,} rows.")
 
 edited = st.data_editor(
     display,
