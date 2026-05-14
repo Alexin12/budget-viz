@@ -108,7 +108,7 @@ Examples now caught:
 
 ---
 
-## [ ] 5. Update Dashboard Charts
+## [x] ~~5. Update Dashboard Charts~~
 
 The dashboard should be updated to focus on monthly spending trends, category composition, top spending areas, category trends, and budget comparison.
 
@@ -125,7 +125,13 @@ Implemented in `app.py` directly under the KPI row (top of dashboard).
 
 ---
 
-### Chart 2: Category Breakdown
+### [x] ~~Chart 2: Category Breakdown~~
+
+Implemented as a `px.bar(barmode="stack")` over (month_label, category). Top 6 categories by total spend in the selected range are kept; everything else is rebucketed into a synthetic `other` series so the chart stays readable. Legend ordered by total spend with `other` pinned last. Y-axis `$,.0f`.
+
+---
+
+### (original spec)
 
 Use a stacked bar chart.
 
@@ -145,7 +151,13 @@ Only show the major categories in the stacked bar chart. Group small categories 
 
 ---
 
-### Chart 3: Top Categories
+### [x] ~~Chart 3: Top Categories~~
+
+Implemented as a horizontal `px.bar` with `st.radio` (3/6/12 month) lookback selector, default 6. Window anchored to `df["month"].max()` so it's "last N months of available data" rather than "last N months from today." Sources filter respected; transfers and refunds excluded. `update_yaxes(categoryorder="total ascending")` puts the biggest bar at the top. Dollar values shown via `text_auto="$,.0f"`.
+
+---
+
+### (original spec)
 
 Use a horizontal bar chart.
 
@@ -163,7 +175,13 @@ This chart should make it easy to compare spending across categories.
 
 ---
 
-### Chart 4: Category Trend
+### [x] ~~Chart 4: Category Trend~~
+
+Implemented as `px.line(markers=True)`. `st.multiselect` picks the focus categories; default is `[shopping, dining, entertainment, transportation, grocery]` — note "gas" maps to `transportation` per the merged Step 3 schema. Options exclude `transfer`.
+
+---
+
+### (original spec)
 
 Use a multi-line chart.
 
@@ -183,7 +201,13 @@ Do not include every category, because too many lines will make the chart diffic
 
 ---
 
-### Chart 5: Budget vs Actual
+### [x] ~~Chart 5: Budget vs Actual~~
+
+Implemented as a grouped horizontal `px.bar` with `barmode="group"`. Per-category monthly budgets persist to `config/category_budgets.json` (created on first save). An `st.expander("Edit category budgets")` exposes a `st.data_editor` and a `Save budgets` button that writes the JSON and reruns. Actuals are computed as monthly average over the selected range (`sum(amount) / n_months`) so they're directly comparable to the stored monthly budget. Categories sorted by Actual descending (largest at the top).
+
+---
+
+### (original spec)
 
 Use a grouped horizontal bar chart.
 

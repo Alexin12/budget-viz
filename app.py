@@ -126,69 +126,207 @@ if not monthly_total.empty:
 
 st.markdown("---")
 
-per_cat_month = (
-    spending.groupby(["month", "category"], as_index=False)["amount"].sum()
+# Chart 2 — Category Breakdown (stacked bar, top 6 + other)
+if spending.empty:
+    st.info("No spending data in the selected range.")
+else:
+    monthly_cat = (
+        spending.groupby(["month", "category"], as_index=False)["amount"].sum()
+    )
+    totals = (
+        monthly_cat.groupby("category")["amount"].sum().sort_values(ascending=False)
+    )
+    top_n = 6
+    major = set(totals.head(top_n).index)
+    monthly_cat["category"] = monthly_cat["category"].where(
+        monthly_cat["category"].isin(major), "other"
+    )
+    monthly_cat = (
+        monthly_cat.groupby(["month", "category"], as_index=False)["amount"].sum()
+    )
+    monthly_cat = monthly_cat.sort_values("month")
+    monthly_cat["month_label"] = monthly_cat["month"].dt.strftime("%Y-%m")
+    month_order = (
+        monthly_cat.sort_values("month")["month_label"].drop_duplicates().tolist()
+    )
+    category_order = [c for c in totals.head(top_n).index if c in major]
+    if (monthly_cat["category"] == "other").any():
+        category_order.append("other")
+    fig_stack = px.bar(
+        monthly_cat,
+        x="month_label",
+        y="amount",
+        color="category",
+        barmode="stack",
+        title="Monthly spending by category (top 6 + other)",
+        category_orders={"month_label": month_order, "category": category_order},
+    )
+    fig_stack.update_yaxes(tickformat="$,.0f", title="Spending")
+    fig_stack.update_xaxes(title="Month")
+    fig_stack.update_layout(legend_title_text="Category")
+    st.plotly_chart(fig_stack, width='stretch')
+
+st.markdown("---")
+
+# Chart 3 — Top Categories (horizontal bar, 3/6/12-month lookback)
+window = st.radio(
+    "Lookback window",
+    options=[3, 6, 12],
+    index=1,
+    horizontal=True,
+    format_func=lambda n: f"{n} months",
+    key="top_categories_window",
 )
 
-if not per_cat_month.empty:
-    avg_by_cat = (
-        per_cat_month.groupby("category", as_index=False)["amount"].sum()
-    )
-    avg_by_cat["amount"] = avg_by_cat["amount"] / n_months
-    avg_by_cat = avg_by_cat.sort_values("amount", ascending=False)
-    fig1 = px.bar(
-        avg_by_cat,
-        x="category",
-        y="amount",
-        title=f"Average monthly spend by category ({n_months} month(s))",
-        labels={"amount": "$ per month"},
-        text_auto=".2f",
-    )
-    fig1.update_layout(showlegend=False)
-    st.plotly_chart(fig1, width='stretch')
+anchor = df["month"].max()
+if pd.isna(anchor):
+    st.info("No data available for top categories.")
 else:
-    st.info("No spending rows in the selected range.")
-
-col_a, col_b = st.columns(2)
-with col_a:
-    if months_in_range:
-        recent_month = months_in_range[-1]
-        recent = spending[spending["month"] == recent_month]
-        donut = recent.groupby("category", as_index=False)["amount"].sum()
-        fig2 = px.pie(
-            donut,
-            names="category",
-            values="amount",
-            hole=0.5,
-            title=f"Breakdown — {pd.Timestamp(recent_month).strftime('%b %Y')}",
+    start = (anchor - pd.DateOffset(months=window - 1)).to_period("M").to_timestamp()
+    window_df = df[
+        (df["month"] >= start)
+        & (df["month"] <= anchor)
+        & (df["source"].isin(sel_sources))
+        & (~df["is_transfer"])
+        & (~df["is_refund"])
+    ]
+    if window_df.empty:
+        st.info(f"No spending in the last {window} months for the selected sources.")
+    else:
+        by_cat = (
+            window_df.groupby("category", as_index=False)["amount"]
+            .sum()
+            .sort_values("amount", ascending=False)
         )
-        st.plotly_chart(fig2, width='stretch')
+        by_cat = by_cat[by_cat["amount"] > 0]
+        if by_cat.empty:
+            st.info(f"No positive spending in the last {window} months.")
+        else:
+            fig_top = px.bar(
+                by_cat,
+                x="amount",
+                y="category",
+                orientation="h",
+                text_auto="$,.0f",
+                title=f"Top categories — last {window} months",
+            )
+            fig_top.update_yaxes(categoryorder="total ascending", title=None)
+            fig_top.update_xaxes(tickformat="$,.0f", title="Spending")
+            fig_top.update_traces(textposition="outside", cliponaxis=False)
+            st.plotly_chart(fig_top, width='stretch')
 
-with col_b:
-    if not per_cat_month.empty:
-        mom = per_cat_month.copy()
-        mom["month_label"] = mom["month"].dt.strftime("%Y-%m")
-        fig3 = px.bar(
-            mom,
-            x="month_label",
-            y="amount",
-            color="category",
-            barmode="group",
-            title="Month-over-month by category",
-            labels={"month_label": "month", "amount": "$"},
-        )
-        st.plotly_chart(fig3, width='stretch')
+st.markdown("---")
 
-if not per_cat_month.empty:
-    fig4 = px.area(
-        per_cat_month.sort_values("month"),
+# Chart 4 — Category Trend (multi-line)
+focus_options = [c for c in CATEGORIES if c != "transfer"]
+default_focus = [
+    c for c in ["shopping", "dining", "entertainment", "transportation", "grocery"]
+    if c in focus_options
+]
+selected_focus = st.multiselect(
+    "Focus categories",
+    options=focus_options,
+    default=default_focus,
+    key="chart4_focus_categories",
+)
+focus_df = spending[spending["category"].isin(selected_focus)]
+if focus_df.empty or not selected_focus:
+    st.info("No spending in the selected focus categories for this range.")
+else:
+    trend = (
+        focus_df.groupby(["month", "category"], as_index=False)["amount"]
+        .sum()
+        .sort_values("month")
+    )
+    fig_trend_cat = px.line(
+        trend,
         x="month",
         y="amount",
         color="category",
-        title="Spending over time (stacked)",
-        labels={"amount": "$"},
+        markers=True,
+        title="Category trend over time",
     )
-    st.plotly_chart(fig4, width='stretch')
+    fig_trend_cat.update_yaxes(tickformat="$,.0f", title="Spending")
+    fig_trend_cat.update_xaxes(type="date", title="Month")
+    st.plotly_chart(fig_trend_cat, width='stretch')
+
+st.markdown("---")
+
+# Chart 5 — Budget vs Actual (grouped horizontal bar)
+st.subheader("Budget vs actual")
+
+budget_path = Path("config/category_budgets.json")
+budgets = json.loads(budget_path.read_text()) if budget_path.exists() else {}
+
+with st.expander("Edit category budgets"):
+    editor_df = pd.DataFrame(
+        {
+            "category": list(SPEND_CATEGORIES),
+            "monthly_budget": [float(budgets.get(c, 0)) for c in SPEND_CATEGORIES],
+        }
+    )
+    budget_edited = st.data_editor(
+        editor_df,
+        column_config={
+            "category": st.column_config.TextColumn("category", disabled=True),
+            "monthly_budget": st.column_config.NumberColumn(
+                "monthly_budget", min_value=0.0, step=10.0, format="$%.0f"
+            ),
+        },
+        hide_index=True,
+        width='stretch',
+        key="budget_editor",
+    )
+    if st.button("Save budgets"):
+        new_budgets = {
+            row["category"]: float(row["monthly_budget"])
+            for _, row in budget_edited.iterrows()
+        }
+        budget_path.parent.mkdir(parents=True, exist_ok=True)
+        budget_path.write_text(json.dumps(new_budgets, indent=2))
+        st.cache_data.clear()
+        st.rerun()
+
+if spending.empty:
+    st.info("No spending in the selected range — Budget vs Actual chart skipped.")
+else:
+    actuals = (
+        spending.groupby("category")["amount"].sum() / n_months
+    ).reindex(SPEND_CATEGORIES, fill_value=0.0)
+    chart_df = pd.DataFrame(
+        {
+            "category": list(SPEND_CATEGORIES),
+            "Budget": [float(budgets.get(c, 0)) for c in SPEND_CATEGORIES],
+            "Actual": actuals.values,
+        }
+    )
+    chart_df = chart_df.sort_values("Actual", ascending=True)
+    category_order_ba = chart_df["category"].tolist()
+    long_df = chart_df.melt(
+        id_vars="category",
+        value_vars=["Budget", "Actual"],
+        var_name="series",
+        value_name="amount",
+    )
+    fig_ba = px.bar(
+        long_df,
+        x="amount",
+        y="category",
+        color="series",
+        orientation="h",
+        barmode="group",
+        text_auto="$,.0f",
+        title="Budget vs actual (monthly average)",
+        category_orders={"category": category_order_ba, "series": ["Budget", "Actual"]},
+        color_discrete_map={"Budget": "#9CA3AF", "Actual": "#2563EB"},
+    )
+    fig_ba.update_xaxes(tickformat="$,.0f", title="Monthly $")
+    fig_ba.update_yaxes(title="")
+    fig_ba.update_layout(
+        legend_title_text="",
+        height=max(360, 32 * len(category_order_ba) + 120),
+    )
+    st.plotly_chart(fig_ba, width='stretch')
 
 with st.expander(f"Transfers panel ({len(transfers)} rows)", expanded=False):
     st.caption("Account-to-account moves. Excluded from spending totals.")
