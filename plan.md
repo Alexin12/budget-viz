@@ -241,6 +241,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started. Strikethrough = fu
 6. [x] ~~**Categorization** — OpenAI + cache. Spot-check 20 random non-transfer rows.~~
 7. [x] ~~**Full dashboard** — 4 charts + filters + inline override.~~
 8. [ ] **Polish** — handle missing API key, empty months, malformed files.
+9. [x] **Filter consistency fix** — Month range slider end is now exclusive; Lookback window chart respects sidebar Range/Sources/Categories filters so its total is always a subset of top Total spend. (commit `b5ba31e`)
 
 ## Verification
 
