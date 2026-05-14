@@ -1,7 +1,9 @@
 
 # Dashboard Update Requirements
 
-## 1. Clean Up Non-Spending Transactions From `Other`
+Legend: `[x]` done · `[ ]` not started. Strikethrough = fully complete.
+
+## [x] ~~1. Clean Up Non-Spending Transactions From `Other`~~
 
 The `Other` category currently contains many transactions that are not actual consumer spending, including:
 
@@ -26,16 +28,22 @@ Examples:
 
 ---
 
-## 2. Categorize Transfer Transactions Correctly
+## [x] ~~2. Categorize Transfer Transactions Correctly~~
 
 Some transactions are currently categorized as `Other`, but they should be categorized as `Transfer`.
 
 This includes:
 
-- Investment platform transfers
-- Zelle payments to YUXIN
+- Investment platform transfers (e.g. `ASTRA*Moomoo` variants on chase_debit `DEBIT_CARD` type)
+- Zelle payments to YUXIN (e.g. discover_debit `Zelle Payment To YUXIN ...`)
 - Zelle payments to Alex Yang
-- Similar account-to-account or person-to-person transfers
+- Similar account-to-account or person-to-person transfers (e.g. outgoing Zelle to YUNLONG / YAYUAN LUO / XIAOMENG / yutssy.inc)
+
+Bug fix bundled with this step: `src/transfers.py` was passing rule patterns to `str.contains` without `regex=False`, so patterns containing `*` (like `ASTRA*Moomoo`) were silently treated as regex and never matched. Fixed by passing `regex=False`.
+
+PayPal dedup follow-up (caught during Step 2 testing): same purchase was showing up 3x (1 card row + 2 paypal rows). Two fixes in `src/paypal_dedup.py`:
+- Drop PayPal `General Authorization (Completed)` when a same-day/same-amount settlement row exists (`Express Checkout Payment`, `General Payment`, etc.) — the Authorization is just the pre-auth hold.
+- Cross-card dedup now matches card descriptions containing `PP*` (Chase's PayPal-funded shorthand), not only `PAYPAL`.
 
 Examples:
 
@@ -43,10 +51,11 @@ Examples:
 |---|---|---:|---:|---|---|
 | 2026-02-12 | chase_debit | ASTRA*Moomoou Visa Direct CA 02/12 | 3000 | other | ASTRA MOOMOOU VISA DIRECT |
 | 2025-08-07 | discover_debit | Zelle Payment To YUXIN LBZ1L7SQD | 1200 | other | ZELLE PAYMENT TO YUXIN |
+| 2026-01-14 | paypal (x2) + chase_freedom_flex | Vivid Seats LLC / PP*VIVID SEATS BRUNO M | 1057.88 each | entertainment | Same purchase recorded 3 times; keep only the card row |
 
 ---
 
-## 3. Improve Category Structure
+## [ ] 3. Improve Category Structure
 
 Avoid putting too many transactions into `Other`.
 
@@ -89,7 +98,7 @@ Recommended primary categories:
 
 ---
 
-## 4. Remove Refund Transaction Pairs
+## [ ] 4. Remove Refund Transaction Pairs
 
 Refund transactions should be removed from spending analysis.
 
@@ -106,7 +115,7 @@ These two transactions should cancel each other out and should not appear in spe
 
 ---
 
-## 5. Update Dashboard Charts
+## [ ] 5. Update Dashboard Charts
 
 The dashboard should be updated to focus on monthly spending trends, category composition, top spending areas, category trends, and budget comparison.
 

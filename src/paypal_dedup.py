@@ -39,7 +39,22 @@ def _internal_filter(pp: pd.DataFrame) -> pd.DataFrame:
     pp = pp[~paired_mask]
     # Keep only known merchant-bearing types (drops General Authorization holds, reversals, voids)
     pp = pp[pp["raw_type"].isin(KEEP_TYPES)]
-    # General Authorization rows we keep only if Completed (already enforced; pending dropped above)
+    # Drop General Authorization rows when a same-day/same-amount settlement row exists
+    # (Authorization is the pre-auth hold; settlement types are the actual money movement)
+    settle_types = {
+        "Express Checkout Payment",
+        "General Payment",
+        "PreApproved Payment Bill User Payment",
+        "General PayPal Debit Card Transaction",
+    }
+    settled = pp[pp["raw_type"].isin(settle_types)]
+    settled_keys = set(zip(settled["date"], settled["amount"].round(2)))
+    is_auth = pp["raw_type"] == "General Authorization"
+    auth_match = pd.Series(
+        [(d, round(a, 2)) in settled_keys for d, a in zip(pp["date"], pp["amount"])],
+        index=pp.index,
+    )
+    pp = pp[~(is_auth & auth_match)]
     return pp
 
 
@@ -61,7 +76,10 @@ def dedup(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 
     # Cross-card dedup: drop PayPal expense rows that match a card PAYPAL row
     cards = others[others["source"].isin(CARD_SOURCES)].copy()
-    cards = cards[cards["description"].str.contains("PAYPAL", case=False, na=False)]
+    cards = cards[
+        cards["description"].str.contains("PAYPAL", case=False, na=False)
+        | cards["description"].str.contains("PP*", case=False, na=False, regex=False)
+    ]
     card_rows = [
         (pd.Timestamp(d), round(abs(a), 2)) for d, a in zip(cards["date"], cards["amount"])
     ]

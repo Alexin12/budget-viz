@@ -37,9 +37,9 @@ def _layer1_mask(df, rules):
             for t, needles in rule.get("type_plus_description", {}).items():
                 t_match = sub & (df["raw_type"] == t)
                 for n in needles:
-                    mask |= t_match & df["description"].str.contains(n, case=False, na=False)
+                    mask |= t_match & df["description"].str.contains(n, case=False, na=False, regex=False)
         for n in rule.get("description_contains", []):
-            mask |= sub & df["description"].str.contains(n, case=False, na=False)
+            mask |= sub & df["description"].str.contains(n, case=False, na=False, regex=False)
     return mask
 
 
