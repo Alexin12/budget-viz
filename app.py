@@ -433,7 +433,12 @@ if sel_categories:
     mask &= table_src["category"].isin(sel_categories)
 
 display = table_src[mask].reset_index(drop=True)
-st.caption(f"Showing {len(display):,} of {len(table_src):,} rows.")
+total_amount = float(display["amount"].sum())
+st.markdown(
+    f"<div style='color:#9aa0a6;font-size:0.875rem;'>Showing {len(display):,} of {len(table_src):,} rows · "
+    f"Total: <span style='color:#22c55e;font-weight:600;'>${total_amount:,.2f}</span></div>",
+    unsafe_allow_html=True,
+)
 
 edited = st.data_editor(
     display,
