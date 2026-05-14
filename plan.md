@@ -239,7 +239,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started. Strikethrough = fu
 4. [x] ~~**Transfer detection** — Layer 1 rules, then Layer 2 pairing. Show transfers panel; user sanity-checks.~~
 5. [x] ~~**PayPal dedup** — run before/after diff to verify which PayPal rows get dropped.~~
 6. [x] ~~**Categorization** — OpenAI + cache. Spot-check 20 random non-transfer rows.~~
-7. [ ] **Full dashboard** — 4 charts + filters + inline override.
+7. [x] ~~**Full dashboard** — 4 charts + filters + inline override.~~
 8. [ ] **Polish** — handle missing API key, empty months, malformed files.
 
 ## Verification

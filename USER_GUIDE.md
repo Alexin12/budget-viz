@@ -236,3 +236,8 @@ PayPal 是最吵的源——它会把一笔真实消费拆成 3~4 行内部记�
 - **某个 PayPal 订阅消费被错误丢掉**：在 PayPal dropped rows 面板里找它，看 `drop_reason`：
   - 若是 `paypal_cross_card`，去对应信用卡的 CSV 里找 `PAYPAL *<商家>` 同金额的行——通常这才是真正应该保留的"那一笔"。
   - 若是 `paypal_internal`，看 `raw_type` 是不是真的属于内部记账。
+
+
+Capable:
+1.把 PayPal pending 的 transaction 都去掉，因为 pending 的 transaction 后面可能需要一到两、两三个工作日转换成真正的消费。
+比如：7	2026-04-03	YUMMY POKE BOWL & BUBB	12.79	General Authorization	Pending	paypal_internal 被移除
