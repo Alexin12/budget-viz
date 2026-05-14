@@ -61,7 +61,7 @@ After normalization: **positive = expense, negative = refund/credit/incoming**. 
 
 ## Categories
 
-`grocery, gas, shopping, travel, dining, utilities, entertainment, housing, taxes, other` — plus the special `transfer` tag (excluded from spending totals). Rent → `housing`, IRS → `taxes`, electricity/insurance → `utilities`, car-loan → `housing` (LLM decides; user can override).
+`grocery, gas, shopping, travel, dining, utilities, entertainment, housing, taxes, car, ai, other` — plus the special `transfer` tag (excluded from spending totals). Rent (Governors Gate I) → `housing`, IRS → `taxes`, electricity/home insurance → `utilities`, car-loan / auto insurance (GEICO always) / auto repair → `car`, **only true AI/dev tools** (Anthropic, OpenAI, OpenRouter, Cursor, Perplexity, Immersive Translate, GitHub Copilot) → `ai`. **NOT ai**: Apple Services, Kindle, Spotify, YouTube, Google One, Udemy — all of those → `entertainment`. Anything ambiguous → `other`. LLM decides; user overrides via `data/category_cache.json` (manual edits always win).
 
 ## Transfer rules (hard-coded reference)
 

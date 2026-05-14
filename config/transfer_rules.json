@@ -1,14 +1,16 @@
 {
   "chase_debit": {
-    "types": ["LOAN_PMT", "ACCT_XFER", "CHASE_TO_PARTNERFI", "PARTNERFI_TO_CHASE"],
+    "types": ["LOAN_PMT", "ACCT_XFER", "CHASE_TO_PARTNERFI", "PARTNERFI_TO_CHASE", "WIRE_INCOMING", "WIRE_OUTGOING"],
     "type_plus_description": {
       "ACH_DEBIT": ["CHASE CREDIT CRD AUTOPAY"],
-      "MISC_DEBIT": ["AMERICAN EXPRESS ACH PMT", "Discover", "SoFi", "ROBINHOOD", "Moomoo"],
-      "MISC_CREDIT": ["SoFi Bank", "Moomoo", "Discover", "ROBINHOOD"]
-    }
+      "MISC_DEBIT": ["AMERICAN EXPRESS ACH PMT", "Discover", "SoFi", "ROBINHOOD", "Moomoo", "FID BKG SVC", "Fidelity", "VENMO"],
+      "MISC_CREDIT": ["SoFi Bank", "Moomoo", "Discover", "ROBINHOOD", "FID BKG SVC", "Fidelity", "VENMO"],
+      "DEBIT_CARD": ["ASTRA*Moomoo", "ASTRA*MOOMOO"]
+    },
+    "description_contains": ["BOOK TRANSFER CREDIT B/O"]
   },
   "discover_debit": {
-    "description_contains": ["DISCOVER E-PAYMENT", "ROBINHOOD DEBITS", "MOOMOO", "SOFI"]
+    "description_contains": ["DISCOVER E-PAYMENT", "ROBINHOOD DEBITS", "MOOMOO", "SOFI", "FID BKG SVC", "JPMORGAN CHASE BANK", "PAYPAL INST XFER", "VENMO"]
   },
   "chase_sapphire": {
     "type_equals": ["Payment"]

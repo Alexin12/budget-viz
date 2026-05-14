@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from src.categorize import categorize
 from src.parsers import detect_parser
 from src.paypal_dedup import dedup as paypal_dedup
 from src.transfers import tag_transfers
@@ -27,4 +28,5 @@ def build_transactions():
     df = df.sort_values("date", ascending=False).reset_index(drop=True)
     df, paypal_dropped = paypal_dedup(df)
     df = tag_transfers(df)
+    df = categorize(df)
     return df, paypal_dropped

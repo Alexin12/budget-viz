@@ -22,7 +22,7 @@ Card Statements/<bank>/*.csv
 [Step 4] Transfer detection     两层规则识别"账户内部转账"
         │   → 给每行打 is_transfer / category="transfer"
         ▼
-[Step 6] OpenAI 分类（待做）     给非 transfer 行打 10 个消费类别之一
+[Step 6] OpenAI 分类             给非 transfer 行打 12 个消费类别之一
         │
         ▼
 [Step 7] Dashboard 渲染          KPI、图表、可筛选表格
@@ -187,7 +187,34 @@ PayPal 是最吵的源——它会把一笔真实消费拆成 3~4 行内部记�
 
 ---
 
-## 7. 完成度
+## 7. Categorization（OpenAI 分类）
+
+非 transfer 的行通过 OpenAI `gpt-4o-mini` 分到 **12 个类别**之一：
+
+| Category | 含义 / 关键示例 |
+|---|---|
+| `grocery` | 超市（Publix、Whole Foods、Trader Joe's、Costco 食品、Aldi、Tony Food Market）|
+| `dining` | 餐厅 / 咖啡 / 外卖（DoorDash、UberEats、Chipotle 等）|
+| `gas` | 加油站 / 充电桩（Shell、Circle K、Chevron）|
+| `travel` | 机票 / 酒店 / Airbnb / Uber / Lyft / 地铁（MTA）/ 停车 |
+| `shopping` | Amazon / Target / Walmart / 衣服 / 电子产品 / CVS / Walgreens |
+| `utilities` | 电费（FPL）/ 水 / 网络 / 电话 / 家庭保险 |
+| `housing` | 房租 / 物业管理 / HOA（Governors Gate I 等）|
+| `taxes` | IRS / 州税 / 营业税 |
+| `entertainment` | Netflix / Spotify / **Kindle** / Kindle Unlimited / **YouTube Premium** / **Google One** / 流媒体 / 游戏（PlayStation）/ 演唱会（Ticketmaster / StubHub）/ 电影（AMC）/ Patreon / **Apple Services**（App Store / iCloud）/ **Udemy / 在线课程** / 博物馆 / 剧院 / 健身房 / 网球 |
+| `car` | **车贷**（Mazda Financial）/ **车险**（GEICO 永远归这里 / Progressive / State Farm Auto）/ 修车 / 零件（Advance Auto / AutoZone）/ DMV / Tag |
+| `ai` | **仅 AI 服务和开发者 API**：Anthropic / Claude / OpenAI / ChatGPT / OpenRouter / Cursor / Perplexity / Immersive Translate / GitHub Copilot。**不包括** Apple Services、Kindle、Spotify、YouTube、Google One、Udemy（这些都是 entertainment） |
+| `other` | 其它无法判定的（人工编辑 cache 来修）|
+| `transfer` | （特殊标签）账户内部转账，**不参与消费统计** |
+
+**Cache 机制**：所有判断结果写入 `data/category_cache.json`（按 merchant signature 归一化为 key）。下次跑 pipeline 时优先查 cache，未命中才调 OpenAI。**手动改 cache 永远优先**——如果你觉得 LLM 给 GEICO 标成 `other` 不对，直接编辑 cache 把它改成 `car`，下次自动生效，不会被 LLM 覆盖。
+
+**常见纠错场景**：
+- 同一商家有多个 signature（如 `GEICO AUTO` 和 `GEICO PREM COLL`）→ 在 cache 里把每个 key 都改成你想要的 category。
+- LLM 把订阅类商家标成 `other` → 直接在 cache 里改。
+- 想增加新 category → 改 `src/categorize.py` 的 `CATEGORIES` 列表 + prompt + **删 cache 重跑**。
+
+## 8. 完成度
 
 | 步骤 | 状态 |
 |---|---|
@@ -196,13 +223,13 @@ PayPal 是最吵的源——它会把一笔真实消费拆成 3~4 行内部记�
 | 3. Pipeline 合并 + 原始数据展示 | 完成 |
 | 4. Transfer detection（两层） | 完成 |
 | 5. PayPal dedup（内部 + 跨卡） | 完成 |
-| 6. OpenAI 分类（10 个 category） | 待做 |
+| 6. OpenAI 分类（12 个 category） | 完成 |
 | 7. 完整 dashboard（4 张图 + 筛选 + 内联改类别） | 待做 |
 | 8. Polish | 待做 |
 
 ---
 
-## 8. 如何排查异常数据
+## 9. 如何排查异常数据
 
 - **某个金额对不上**：先去原始 CSV（`Card Statements/<bank>/...`）里搜这个日期 + 金额，确认是 parser 问题还是 CSV 本身的问题。我们的 parser 用 Python `csv` 模块解析，对含逗号的描述安全，不会列错位。
 - **某个商家被错误识别为转账**：到 `config/transfer_rules.json` 里看是不是 `description_contains` 命中了不该命中的关键词，调整规则后重启 dashboard。
