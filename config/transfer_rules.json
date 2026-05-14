@@ -7,10 +7,13 @@
       "MISC_CREDIT": ["SoFi Bank", "Moomoo", "Discover", "ROBINHOOD", "FID BKG SVC", "Fidelity", "VENMO"],
       "DEBIT_CARD": ["ASTRA*Moomoo", "ASTRA*MOOMOO"]
     },
-    "description_contains": ["BOOK TRANSFER CREDIT B/O"]
+    "description_contains": ["BOOK TRANSFER CREDIT B/O", "PENSACOLA STATE  DIR DEP", "ODP TRANSFER FROM SAVINGS", "Cash Redemption", "DepositCloud", "DEPOSITCLOUD", "Zelle payment from", "Pen Air CU"]
   },
   "discover_debit": {
-    "description_contains": ["DISCOVER E-PAYMENT", "ROBINHOOD DEBITS", "MOOMOO", "SOFI", "FID BKG SVC", "JPMORGAN CHASE BANK", "PAYPAL INST XFER", "VENMO"]
+    "description_contains": ["DISCOVER E-PAYMENT", "ROBINHOOD", "MOOMOO", "SOFI", "FID BKG SVC", "JPMORGAN CHASE BANK", "PAYPAL INST XFER", "VENMO", "PENSACOLA STATE", "PAYROLL ACH"]
+  },
+  "amex": {
+    "description_contains": ["MOBILE PAYMENT - THANK YOU", "PAYMENT - THANK YOU", "AUTOPAY PAYMENT"]
   },
   "chase_sapphire": {
     "type_equals": ["Payment"]

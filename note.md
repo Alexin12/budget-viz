@@ -5,10 +5,13 @@
 
 The `Other` category currently contains many transactions that are not actual consumer spending, including:
 
-- Credit card payments
-- Paystubs / payroll deposits
-- Transfers from investment platforms should be categorized as transfer
-- Other transactions with negative amounts that represent income, payments, or transfers
+- Credit card payments (e.g. Amex `MOBILE PAYMENT - THANK YOU`)
+- Paystubs / payroll deposits (e.g. `PENSACOLA STATE DIR DEP`, `Early Pay PAYROLL ACH from PENSACOLA STATE`)
+- Transfers from investment platforms (e.g. `ROBINHOOD`, `MOOMOO`, `FID BKG SVC`)
+- Internal account moves (e.g. `ODP TRANSFER FROM SAVINGS`, `Cash Redemption`)
+- Refund-style ACH credits routed through third-party services (e.g. `DepositCloud BILLPAY` — treated as transfer because it represents money returning to the user, not new spending)
+- Incoming P2P payments / reimbursements (e.g. `Zelle payment from <name>`, `Pen Air CU P2P PYMTS`)
+- Any other negative-amount transaction that represents income, a payment received, or a transfer
 
 These transactions should be excluded from spending analysis.
 
@@ -18,6 +21,8 @@ Examples:
 |---|---|---:|---:|---|---|
 | 2026-04-28 | amex | MOBILE PAYMENT - THANK YOU | -500 | other | MOBILE PAYMENT - THANK YOU |
 | 2025-10-29 | discover_debit | Early Pay PAYROLL ACH from PENSACOLA STATE | -2248.41 | other | EARLY PAY PAYROLL ACH FROM PENSACOLA STATE |
+| 2026-01-30 | chase_debit | DepositCloud BILLPAY PPD ID: 1842978924 | -1071.57 | other | DEPOSITCLOUD BILLPAY |
+| 2024-07-01 | chase_debit | Zelle payment from XINYAN HE | -500 | other | ZELLE PAYMENT FROM XINYAN HE |
 
 ---
 
