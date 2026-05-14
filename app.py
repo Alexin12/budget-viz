@@ -106,6 +106,16 @@ n_months = max(1, len(months_in_range))
 total_spend = spending["amount"].sum()
 avg_monthly = total_spend / n_months
 
+_palette = px.colors.qualitative.Plotly
+_cat_totals_for_color = (
+    spending.groupby("category")["amount"].sum().sort_values(ascending=False)
+)
+CATEGORY_COLORS = {
+    cat: _palette[i % len(_palette)]
+    for i, cat in enumerate(_cat_totals_for_color.index.tolist())
+}
+CATEGORY_COLORS["other"] = "#9CA3AF"
+
 k1, k2, k3 = st.columns(3)
 k1.metric("Total spend", f"${total_spend:,.2f}")
 k2.metric("Avg monthly spend", f"${avg_monthly:,.2f}")
@@ -157,6 +167,7 @@ if not monthly_total.empty:
             y="avg",
             size="avg",
             color="category",
+            color_discrete_map=CATEGORY_COLORS,
             size_max=40,
             title=f"Average monthly spending by category ({n_months} month{'s' if n_months != 1 else ''})",
         )
@@ -204,29 +215,64 @@ else:
     category_order = [c for c in totals.head(top_n).index if c in major]
     if (monthly_cat["category"] == "other").any():
         category_order.append("other")
-    fig_stack = px.bar(
-        monthly_cat,
-        x="month_label",
-        y="amount",
-        color="category",
-        barmode="stack",
-        title="Monthly spending by category (top 6 + other)",
-        category_orders={"month_label": month_order, "category": category_order},
-        text="pct_label",
-        custom_data=["pct"],
+    amount_pivot = (
+        monthly_cat.pivot(index="month_label", columns="category", values="amount")
+        .reindex(index=month_order, columns=category_order)
+        .fillna(0)
     )
-    fig_stack.update_traces(
-        textposition="inside",
-        insidetextanchor="middle",
-        textfont_size=11,
-        hovertemplate=(
-            "%{x}<br>%{fullData.name}: $%{y:,.2f} "
-            "(%{customdata[0]:.1f}%)<extra></extra>"
-        ),
+    pct_pivot = (
+        monthly_cat.pivot(index="month_label", columns="category", values="pct")
+        .reindex(index=month_order, columns=category_order)
+        .fillna(0)
+    )
+    base_pivot = pd.DataFrame(0.0, index=amount_pivot.index, columns=amount_pivot.columns)
+    for month in amount_pivot.index:
+        row = amount_pivot.loc[month]
+        sorted_cats = row.sort_values(ascending=False).index.tolist()
+        cum = 0.0
+        for cat in sorted_cats:
+            base_pivot.loc[month, cat] = cum
+            cum += row[cat]
+
+    color_map = {cat: CATEGORY_COLORS.get(cat, "#9CA3AF") for cat in category_order}
+
+    fig_stack = go.Figure()
+    for cat in category_order:
+        amounts = amount_pivot[cat].values
+        bases = base_pivot[cat].values
+        pcts = pct_pivot[cat].values
+        text_labels = [f"{p:.1f}%" if a > 0 else "" for a, p in zip(amounts, pcts)]
+        fig_stack.add_trace(
+            go.Bar(
+                x=list(amount_pivot.index),
+                y=amounts,
+                base=bases,
+                name=cat,
+                marker_color=color_map[cat],
+                text=text_labels,
+                textposition="inside",
+                insidetextanchor="middle",
+                textfont_size=11,
+                customdata=pcts,
+                hovertemplate=(
+                    f"%{{x}}<br>{cat}: $%{{y:,.2f}} "
+                    "(%{customdata:.1f}%)<extra></extra>"
+                ),
+            )
+        )
+    fig_stack.update_layout(
+        barmode="overlay",
+        title="Monthly spending by category (top 6 + other)",
+        legend_title_text="Category",
+        uniformtext_minsize=8,
+        uniformtext_mode="hide",
     )
     fig_stack.update_yaxes(tickformat="$,.0f", title="Spending")
-    fig_stack.update_xaxes(title="Month")
-    fig_stack.update_layout(legend_title_text="Category", uniformtext_minsize=8, uniformtext_mode="hide")
+    fig_stack.update_xaxes(
+        title="Month",
+        categoryorder="array",
+        categoryarray=month_order,
+    )
     st.plotly_chart(fig_stack, width='stretch')
     if other_cats:
         other_totals = totals.loc[other_cats]
@@ -278,6 +324,8 @@ else:
                 x="amount",
                 y="category",
                 orientation="h",
+                color="category",
+                color_discrete_map=CATEGORY_COLORS,
                 text_auto="$,.0f",
                 title=f"Top categories — last {window} months",
             )
@@ -314,6 +362,7 @@ else:
         x="month",
         y="amount",
         color="category",
+        color_discrete_map=CATEGORY_COLORS,
         markers=True,
         title="Category trend over time",
     )
