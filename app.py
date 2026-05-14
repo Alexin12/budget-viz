@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 from src.categorize import CACHE_PATH, CATEGORIES
@@ -60,6 +61,10 @@ sel_cats = st.sidebar.multiselect(
     "Categories", SPEND_CATEGORIES, default=SPEND_CATEGORIES
 )
 show_transfers = st.sidebar.checkbox("Include transfers in table", value=False)
+monthly_budget = st.sidebar.number_input(
+    "Monthly budget ($)", min_value=0, value=0, step=100,
+    help="0 = hide budget line on the monthly trend chart.",
+)
 
 base_mask = (
     (df["month"] >= start_month)
@@ -84,6 +89,40 @@ k1, k2, k3 = st.columns(3)
 k1.metric("Total spend", f"${total_spend:,.2f}")
 k2.metric("Avg monthly spend", f"${avg_monthly:,.2f}")
 k3.metric("Transactions", f"{len(spending):,}")
+
+st.markdown("---")
+
+monthly_total = (
+    spending.groupby("month", as_index=False)["amount"].sum().sort_values("month")
+)
+if not monthly_total.empty:
+    fig_trend = go.Figure()
+    fig_trend.add_trace(
+        go.Scatter(
+            x=monthly_total["month"],
+            y=monthly_total["amount"],
+            mode="lines+markers",
+            name="Monthly spend",
+            line=dict(width=3),
+            hovertemplate="%{x|%b %Y}<br>$%{y:,.2f}<extra></extra>",
+        )
+    )
+    if monthly_budget > 0:
+        fig_trend.add_hline(
+            y=monthly_budget,
+            line_dash="dash",
+            line_color="crimson",
+            annotation_text=f"Budget ${monthly_budget:,}",
+            annotation_position="top right",
+        )
+    fig_trend.update_layout(
+        title="Monthly total spending",
+        xaxis_title="Month",
+        yaxis_title="$",
+        yaxis_tickformat="$,.0f",
+        height=380,
+    )
+    st.plotly_chart(fig_trend, width='stretch')
 
 st.markdown("---")
 

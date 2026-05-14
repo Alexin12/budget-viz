@@ -87,20 +87,24 @@ If a signature starts with `PAYPAL `, ignore the PAYPAL prefix and classify by t
 
 ---
 
-## [ ] 4. Remove Refund Transaction Pairs
+## [x] ~~4. Remove Refund Transaction Pairs~~
 
-Refund transactions should be removed from spending analysis.
+Refund pairs and standalone credits are now excluded from spending. Implementation in `src/refunds.py`:
 
-If two transactions have the same or highly similar description and opposite amounts, they should be treated as a refund pair and excluded.
+- Pair detection: same merchant + opposite amounts within ±$0.01 + dates within 60 days. Cross-source pairing allowed when descriptions share a meaningful merchant token (stopwords like `PAYPAL`, `AMZN`, `MKTP`, `INC`, `COM` skipped). Picks the closest-date candidate.
+- Standalone credits: any remaining negative non-transfer row is also flagged `is_refund=True` (Chase Travel Credit, GEICO refund, Aspen Dental refund, etc.).
+- Dashboard spending mask now filters `~is_transfer & ~is_refund`.
 
-Example:
+Bug fix bundled with this step: `src/paypal_dedup.py` cross-card dedup originally skipped negative amounts (`if row["amount"] <= 0: continue`), so refunds passing through PayPal showed up twice (once on PayPal, once on the funding card). Switched to signed-amount matching so refund direction dedups the same as purchase direction.
 
-| Date | Account | Description | Amount | Current Category | Clean Description |
-|---|---|---:|---:|---|---|
-| 2026-01-09 | discover_credit | RIFKIN & FOX-ISICOFF PA MIAMI FL | -250 | other | RIFKIN & FOX-ISICOFF PA MIAMI |
-| 2026-01-08 | discover_credit | RIFKIN & FOX-ISICOFF PA MIAMI FL | 250 | other | RIFKIN & FOX-ISICOFF PA MIAMI |
+Examples now caught:
 
-These two transactions should cancel each other out and should not appear in spending totals.
+| Date | Account | Description | Amount | Pair partner |
+|---|---|---:|---:|---|
+| 2026-01-29 | chase_freedom_flex | PAYPAL *TIFFANY CO | -1128.75 | chase_sapphire `Tiffany and Co.` +1128.75 (cross-source) |
+| 2026-01-09 | discover_credit | RIFKIN & FOX-ISICOFF PA MIAMI FL | -250 | discover_credit `RIFKIN & FOX-ISICOFF PA MIAMI FL` +250 |
+| 2025-11-07 | chase_sapphire | ASPEN DENTAL REFUND 0002 | -143.60 | chase_sapphire `ASPEN PENSACOLA N 4137` +143.60 (different signature) |
+| 2024-11-23 | chase_sapphire | Chase Travel Credit | -272.35 | chase_sapphire `CL *Chase Travel` +272.35 |
 
 ---
 
@@ -110,23 +114,14 @@ The dashboard should be updated to focus on monthly spending trends, category co
 
 ---
 
-### Chart 1: Monthly Total Spending
+### [x] ~~Chart 1: Monthly Total Spending~~
 
-Place this chart at the top of the dashboard.
+Implemented in `app.py` directly under the KPI row (top of dashboard).
 
-Use a line chart.
-
-Purpose:
-
-- Show the trend of total monthly spending over time.
-
-Chart design:
-
-- X-axis: Month
-- Y-axis: Total spending amount
-- Optional: Add a budget line
-
-This should be the main overview chart.
+- Line chart with markers (`plotly.graph_objects.Scatter`, mode `lines+markers`).
+- X-axis: month (first day of month timestamp); Y-axis: total monthly spend (already excludes transfers and refunds).
+- Sidebar adds a `Monthly budget ($)` number input. When > 0, a dashed crimson `add_hline` is drawn as the budget reference; when 0 the line is hidden.
+- Y-axis formatted as `$,.0f`; hover shows `Mon YYYY` + `$X,XXX.XX`.
 
 ---
 
