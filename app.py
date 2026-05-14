@@ -47,13 +47,35 @@ default_start = month_labels[max(0, len(month_labels) - 6)]
 default_end = month_labels[-1]
 
 st.sidebar.header("Filters")
-start_label, end_label = st.sidebar.select_slider(
-    "Month range",
-    options=month_labels,
-    value=(default_start, default_end),
+month_mode = st.sidebar.radio(
+    "Month filter mode",
+    options=["Range", "Pick months"],
+    horizontal=True,
 )
-start_month = pd.Timestamp(start_label)
-end_month = pd.Timestamp(end_label)
+
+if month_mode == "Range":
+    start_label, end_label = st.sidebar.select_slider(
+        "Month range",
+        options=month_labels,
+        value=(default_start, default_end),
+    )
+    start_month = pd.Timestamp(start_label)
+    end_month = pd.Timestamp(end_label)
+    selected_months = [
+        pd.Timestamp(m) for m in month_labels
+        if start_month <= pd.Timestamp(m) <= end_month
+    ]
+else:
+    default_picks = month_labels[max(0, len(month_labels) - 6):]
+    picked_labels = st.sidebar.multiselect(
+        "Months",
+        options=month_labels,
+        default=default_picks,
+    )
+    if not picked_labels:
+        st.warning("Select at least one month.")
+        st.stop()
+    selected_months = [pd.Timestamp(m) for m in picked_labels]
 
 sources = sorted(df["source"].unique())
 sel_sources = st.sidebar.multiselect("Sources", sources, default=sources)
@@ -67,8 +89,7 @@ monthly_budget = st.sidebar.number_input(
 )
 
 base_mask = (
-    (df["month"] >= start_month)
-    & (df["month"] <= end_month)
+    df["month"].isin(selected_months)
     & (df["source"].isin(sel_sources))
 )
 in_range = df.loc[base_mask].copy()
