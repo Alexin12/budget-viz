@@ -238,6 +238,23 @@ PayPal 是最吵的源——它会把一笔真实消费拆成 3~4 行内部记�
   - 若是 `paypal_internal`，看 `raw_type` 是不是真的属于内部记账。
 
 
-Capable:
-1.把 PayPal pending 的 transaction 都去掉，因为 pending 的 transaction 后面可能需要一到两、两三个工作日转换成真正的消费。
+## Trap need to aviod later(fixed):
+- 1.把 PayPal pending 的 transaction 都去掉，因为 pending 的 transaction 后面可能需要一到两、两三个工作日转换成真正的消费。
 比如：7	2026-04-03	YUMMY POKE BOWL & BUBB	12.79	General Authorization	Pending	paypal_internal 被移除
+
+- 2.PayPal 与信用卡——与绑定信用卡之间的重复 transaction。
+  问题 1：card 行的描述是 PP*VIVID SEATS BRUNO M，不含 PAYPAL，所以 cross-card dedup 没识别到。Chase 实际显示 PayPal 交易常用 PP* 前缀，需要把匹配条件从 PAYPAL 扩展到包含 PP*。
+
+  问题 2：PayPal 自己重复记录了同一笔购买：
+  - General Authorization (Completed) —— 预授权
+  - Express Checkout Payment (Completed) —— 实际扣款
+  
+  这是 PayPal 内部记账重复。CLAUDE.md/paypal_dedup.py 的 KEEP_TYPES 同时保留了两者，但当二者同日同额时，Authorization 应该 drop。
+
+- 3.退款交易（refund）必须成对移除。如果一笔购买后来被退款，正负两条都不能进消费统计——否则消费总额会虚高。`src/refunds.py` 里 `tag_refunds` 现在把成对的正负行都打 `is_refund=True`，dashboard 用 `~is_transfer & ~is_refund` 同时过滤。
+
+- 4.退款配对不能只看同一 source + 同一 signature。Tiffany 例子：购买在 chase_sapphire（`Tiffany and Co.`），退款走 PayPal 落到 chase_freedom_flex（`PAYPAL *TIFFANY CO`），source 和 signature 都不一样。现在的规则：金额抵消 + 60 天内 + 描述共享一个有意义的 merchant token（跳过 PAYPAL / AMZN / MKTP / INC / COM 等通用词），允许跨 source 配对，并选日期最近的负数行。
+
+- 5.孤立的负数（refund 无对应购买，例如 Chase Travel Credit、GEICO refund、Aspen Dental refund）也不能进消费。`tag_refunds` 在配对完成后，把所有剩余的负数非转账行直接打 `is_refund=True`，单一规则覆盖"配对退款 + 独立 credit"两种情况。
+
+- 6.PayPal cross-card dedup 必须同时处理退款方向。原代码里 `if row["amount"] <= 0: continue` 只对正数（消费）去重，所以 Tiffany 退款 -1128.75 在 PayPal 和 chase_freedom_flex 上各出现一次。改为用带符号金额匹配后，购买和退款两个方向都能去重。

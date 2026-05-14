@@ -5,6 +5,7 @@ import pandas as pd
 from src.categorize import categorize
 from src.parsers import detect_parser
 from src.paypal_dedup import dedup as paypal_dedup
+from src.refunds import tag_refunds
 from src.transfers import tag_transfers
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,5 +29,6 @@ def build_transactions():
     df = df.sort_values("date", ascending=False).reset_index(drop=True)
     df, paypal_dropped = paypal_dedup(df)
     df = tag_transfers(df)
+    df = tag_refunds(df)
     df = categorize(df)
     return df, paypal_dropped

@@ -67,8 +67,13 @@ base_mask = (
     & (df["source"].isin(sel_sources))
 )
 in_range = df.loc[base_mask].copy()
-spending = in_range[~in_range["is_transfer"] & in_range["category"].isin(sel_cats)].copy()
+spending = in_range[
+    ~in_range["is_transfer"]
+    & ~in_range["is_refund"]
+    & in_range["category"].isin(sel_cats)
+].copy()
 transfers = in_range[in_range["is_transfer"]].copy()
+refunds = in_range[in_range["is_refund"]].copy()
 
 months_in_range = sorted(spending["month"].dropna().unique())
 n_months = max(1, len(months_in_range))
@@ -152,6 +157,19 @@ with st.expander(f"Transfers panel ({len(transfers)} rows)", expanded=False):
         st.dataframe(
             transfers[["date", "source", "description", "amount", "transfer_layer"]]
             .sort_values("date", ascending=False),
+            width='stretch',
+            height=300,
+        )
+
+with st.expander(f"Refunds & credits ({len(refunds)} rows)", expanded=False):
+    st.caption(
+        "Paired refunds (both sides) plus standalone credits (negative non-transfer rows). "
+        "Excluded from spending totals."
+    )
+    if len(refunds):
+        st.dataframe(
+            refunds[["date", "source", "description", "amount", "refund_pair_id"]]
+            .sort_values(["refund_pair_id", "date"], ascending=[True, False]),
             width='stretch',
             height=300,
         )

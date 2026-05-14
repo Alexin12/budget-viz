@@ -84,13 +84,14 @@ def dedup(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
         (pd.Timestamp(d), round(abs(a), 2)) for d, a in zip(cards["date"], cards["amount"])
     ]
 
+    card_rows_signed = [
+        (pd.Timestamp(d), round(a, 2)) for d, a in zip(cards["date"], cards["amount"])
+    ]
     drop_idx = []
     for idx, row in kept.iterrows():
-        if row["amount"] <= 0:
-            continue  # only dedup expenses
         d = pd.Timestamp(row["date"])
-        target = round(abs(row["amount"]), 2)
-        for cd, ca in card_rows:
+        target = round(row["amount"], 2)
+        for cd, ca in card_rows_signed:
             if abs((d - cd).days) <= 3 and ca == target:
                 drop_idx.append(idx)
                 break
