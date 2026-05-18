@@ -73,6 +73,11 @@ def _client() -> OpenAI:
     return OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
 
+def has_api_key() -> bool:
+    load_dotenv(ROOT / ".env")
+    return bool(os.environ.get("OPENAI_API_KEY"))
+
+
 def _classify_batch(client: OpenAI, signatures: list[str]) -> dict[str, str]:
     cat_list = ", ".join(CATEGORIES)
     user = (

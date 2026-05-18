@@ -462,6 +462,29 @@ with st.expander(f"Transfers panel ({len(transfers)} rows)", expanded=False):
             height=300,
         )
 
+MANUAL_PAIRS_PATH = Path(__file__).resolve().parent / "config" / "manual_refund_pairs.json"
+
+
+def load_manual_pairs() -> list[dict]:
+    if not MANUAL_PAIRS_PATH.exists():
+        return []
+    return json.loads(MANUAL_PAIRS_PATH.read_text())
+
+
+def save_manual_pairs(pairs: list[dict]) -> None:
+    MANUAL_PAIRS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    MANUAL_PAIRS_PATH.write_text(json.dumps(pairs, indent=2))
+
+
+def _row_to_manual_entry(row) -> dict:
+    return {
+        "date": str(pd.Timestamp(row["date"]).date()),
+        "source": row["source"],
+        "amount": round(float(row["amount"]), 2),
+        "description": str(row["description"]),
+    }
+
+
 with st.expander(f"Refunds & credits ({len(refunds)} rows)", expanded=False):
     st.caption(
         "Paired refunds (both sides) plus standalone credits (negative non-transfer rows). "
@@ -474,6 +497,85 @@ with st.expander(f"Refunds & credits ({len(refunds)} rows)", expanded=False):
             width='stretch',
             height=300,
         )
+
+    st.markdown("**Manually pin a refund pair**")
+    st.caption(
+        "Pick an unpaired refund and a candidate charge (same source, opposite amount, within 60 days). "
+        "Manual pins always override auto/LLM matches."
+    )
+    unpaired_refunds = refunds[refunds["refund_pair_id"] == ""].copy()
+    if unpaired_refunds.empty:
+        st.info("No unpaired refunds in the current filter.")
+    else:
+        unpaired_refunds = unpaired_refunds.sort_values("date", ascending=False).reset_index(drop=True)
+        refund_labels = [
+            f"{pd.Timestamp(r['date']).date()} | {r['source']} | {r['amount']:.2f} | {str(r['description'])[:60]}"
+            for _, r in unpaired_refunds.iterrows()
+        ]
+        sel_refund_idx = st.selectbox(
+            "Refund row",
+            options=range(len(refund_labels)),
+            format_func=lambda i: refund_labels[i],
+            key="manual_refund_pick",
+        )
+        ref_row = unpaired_refunds.iloc[sel_refund_idx]
+
+        candidate_pool = df[
+            (~df["is_transfer"])
+            & (df["amount"] > 0)
+            & (df["source"] == ref_row["source"])
+            & ((df["amount"] - (-float(ref_row["amount"]))).abs() < 0.01)
+            & ((pd.to_datetime(df["date"]) - pd.Timestamp(ref_row["date"])).abs() <= pd.Timedelta(days=60))
+        ].copy()
+        if candidate_pool.empty:
+            st.warning("No candidate charges found for this refund (same source, opposite amount, within 60 days).")
+        else:
+            candidate_pool = candidate_pool.sort_values("date").reset_index(drop=True)
+            cand_labels = [
+                f"{pd.Timestamp(r['date']).date()} | {str(r['description'])[:80]}"
+                for _, r in candidate_pool.iterrows()
+            ]
+            sel_charge_idx = st.selectbox(
+                "Match to charge",
+                options=range(len(cand_labels)),
+                format_func=lambda i: cand_labels[i],
+                key="manual_charge_pick",
+            )
+            chg_row = candidate_pool.iloc[sel_charge_idx]
+            if st.button("Pin pair", key="pin_pair_btn"):
+                pairs = load_manual_pairs()
+                pairs.append({
+                    "refund": _row_to_manual_entry(ref_row),
+                    "charge": _row_to_manual_entry(chg_row),
+                })
+                save_manual_pairs(pairs)
+                st.cache_data.clear()
+                st.rerun()
+
+    pinned = load_manual_pairs()
+    if pinned:
+        st.markdown("**Pinned manual pairs**")
+        pinned_df = pd.DataFrame([
+            {
+                "idx": i,
+                "refund": f"{p['refund']['date']} | {p['refund']['source']} | {p['refund']['amount']:.2f} | {p['refund']['description'][:50]}",
+                "charge": f"{p['charge']['date']} | {p['charge']['source']} | {p['charge']['amount']:.2f} | {p['charge']['description'][:50]}",
+            }
+            for i, p in enumerate(pinned)
+        ])
+        st.dataframe(pinned_df, width='stretch', hide_index=True)
+        unpin_choice = st.selectbox(
+            "Unpin",
+            options=range(len(pinned)),
+            format_func=lambda i: pinned_df.iloc[i]["refund"] + "  ↔  " + pinned_df.iloc[i]["charge"],
+            key="unpin_pick",
+        )
+        if st.button("Unpin selected", key="unpin_btn"):
+            pairs = load_manual_pairs()
+            pairs.pop(unpin_choice)
+            save_manual_pairs(pairs)
+            st.cache_data.clear()
+            st.rerun()
 
 with st.expander(f"PayPal dropped rows ({len(paypal_dropped)})", expanded=False):
     st.caption(

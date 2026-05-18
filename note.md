@@ -230,3 +230,66 @@ Example:
 | Food | 600 | 720 |
 | Shopping | 300 | 480 |
 | Gas | 150 | 130 |
+
+---
+
+## Challenge and solution
+
+### [ ] 6. Refund pairing misses generic-named refunds (e.g. Amazon)
+
+#### Problem
+
+`src/refunds.py` pairs a negative (refund) row with a positive (charge) row only when both descriptions share at least one ≥4-character token that is NOT in `STOP_TOKENS`. The stop list includes generic merchant words such as `AMAZON`, `AMZN`, `MKTPLACE`, `MKTP`, `PMTS`. Real-world example:
+
+- Refund row: `chase_freedom_flex` `2026-04-16` `AMAZON MKTPLACE PMTS` `-$116.09` → tokens after stop-word filter = `{}` (everything is a stop word).
+- Charge row: `chase_freedom_flex` `2026-04-10` `AMAZON MKTPL*BY0UT71L2` `+$116.09` → tokens = `{MKTPL, BY0UT71L2}`.
+- Token intersection is empty → the refund is left unpaired (marked `is_refund=True`, empty `refund_pair_id`), so it IS excluded from spending — but the corresponding +$116.09 charge is NOT excluded. Total spend is overstated.
+
+The fragility: any future merchant whose refund description differs structurally from its charge description (truncations, alternate suffixes, generic billing prefixes) will hit the same failure.
+
+#### Candidate solutions considered
+
+1. **Loosen `STOP_TOKENS`** (remove `AMAZON / AMZN / MKTPLACE / MKTP / PMTS`).
+   - Pros: one-line fix for the immediate Amazon case.
+   - Cons: doesn't generalize. Future merchants with a similar token-naming gap will silently break again. Treats symptom, not root cause.
+
+2. **LLM-based fallback adjudicator (gpt-4o-mini)**.
+   - For each unpaired refund, build the candidate set (same source, opposite amount within $0.01, within 60 days), and ask the LLM to pick the matching charge or "none". Cache results to `data/refund_pair_cache.json`.
+   - Pros: robust to any future merchant naming variation. Cheap (<30 calls per full rebuild, well under $0.01). Reuses existing OpenAI client + cache pattern from `src/categorize.py`.
+   - Cons: requires an `OPENAI_API_KEY` to be present (must degrade gracefully when missing). Non-determinism risk (mitigated by `temperature=0` and caching).
+
+3. **Embed merchant strings + cosine similarity**.
+   - Pros: no per-pair LLM call after embedding once.
+   - Cons: introduces a new dependency (embeddings model + vector storage). Overkill for the data volume here.
+
+4. **Have the LLM extract a normalized `brand` field during categorization**.
+   - Pros: solves the matching problem at the source — rows for the same brand always share a `brand` value, regardless of description noise.
+   - Cons: requires extending `categorize.py`'s schema and re-running categorization to backfill. Larger blast radius.
+
+5. **Manual UI override only** (in the Refunds & credits panel).
+   - Pros: 100% reliable. No LLM cost.
+   - Cons: requires manual work for every new unmatched refund.
+
+6. **Single-candidate auto-pair shortcut**.
+   - When the candidate set (same source + opposite amount + 60-day window) contains exactly ONE positive charge, auto-pair without checking merchant name. Ambiguity is essentially zero.
+   - Pros: free, deterministic, fixes most everyday cases.
+   - Cons: doesn't help when there are multiple equal-amount candidates.
+
+#### Chosen approach (hybrid)
+
+A four-stage pairing pipeline, evaluated in order:
+
+1. **Pass 1 — current rule-based pairing** (`refunds.py`): unchanged. Catches obvious cases with shared distinctive tokens.
+2. **Pass 1.5 — single-candidate auto-pair**: if exactly one candidate charge matches by source + opposite amount + ≤60 days, pair it without merchant check.
+3. **Pass 2 — LLM adjudicator** (only if `OPENAI_API_KEY` is present): for refunds with multiple candidates, send a short prompt to `gpt-4o-mini` asking it to pick a candidate index or "none". Cache results in `data/refund_pair_cache.json` keyed by stable hash of `(refund_signature, sorted candidate signatures, amount)`.
+4. **Pass 3 — manual override**: read `config/manual_refund_pairs.json` (user-edited via UI). Manual pins always win over auto/LLM decisions.
+
+Rationale: cheap deterministic fixes run first; LLM is only invoked for genuinely ambiguous cases; the user retains final authority via manual pinning. Degrades gracefully without an API key (Passes 1, 1.5, 3 still work).
+
+UI changes in `app.py` Refunds & credits panel:
+- Two dropdowns (unpaired refund + candidate charge) + "Pin pair" button → writes JSON.
+- Listing of currently pinned pairs with an "Unpin" control.
+
+#### Verification
+
+See `plan.md` for the implementation plan and end-to-end test steps.

@@ -242,6 +242,55 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started. Strikethrough = fu
 7. [x] ~~**Full dashboard** — 4 charts + filters + inline override.~~
 8. [ ] **Polish** — handle missing API key, empty months, malformed files.
 9. [x] **Filter consistency fix** — Month range slider end is now exclusive; Lookback window chart respects sidebar Range/Sources/Categories filters so its total is always a subset of top Total spend. (commit `b5ba31e`)
+10. [ ] **Smarter refund pairing (hybrid)** — fix unmatched refunds (e.g. Amazon $116.09) so the corresponding charges are also excluded from spending. Background and option analysis: see `note.md` → "Challenge and solution" → item 6.
+
+   **Files**
+   - Modify `src/refunds.py` — extend `tag_refunds` with three additional passes after the existing token-overlap rule.
+   - Modify `src/categorize.py` — add `has_api_key()` helper; expose `_client()` for reuse (no behavior change).
+   - Modify `app.py` — augment the Refunds & credits expander (around `app.py:465-476`) with a "Pin pair" UI and a list of pinned pairs.
+   - Create `config/manual_refund_pairs.json` (committed) — user-pinned pairs.
+   - Create `data/refund_pair_cache.json` (gitignored) — LLM adjudicator cache.
+
+   **Pipeline order inside `tag_refunds`**
+   1. Pass 1 (existing): token-overlap pairing — unchanged.
+   2. Pass 1.5 (new): if exactly one positive candidate matches by `same source + |amount + neg.amount| < 0.01 + |dates| ≤ 60d`, auto-pair without merchant check.
+   3. Pass 2 (new, only if `has_api_key()` is true): for refunds with multiple candidates, ask `gpt-4o-mini` to pick a candidate index or "none". Cache key = stable hash of `(refund_signature, sorted(candidate_signatures), round(abs(amount), 2))`. Cache stored at `data/refund_pair_cache.json`. Reuses `src/categorize.py:_client()` and the `load_cache / save_cache` pattern.
+   4. Pass 3 (new): apply `config/manual_refund_pairs.json`. Manual wins — if a row was already auto/LLM-paired with a different counterpart, undo that pair before applying the manual one.
+   5. Existing standalone tagging at `refunds.py:76-77` runs last.
+
+   **LLM prompt** (one call per ambiguous refund, `temperature=0`, `max_tokens=5`):
+   ```
+   You match a refund row to its original purchase. Reply with ONLY the candidate number (1..N) or "none".
+   Refund: {date} | {source} | {description} | {amount}
+   Candidates (positive charges, same source, opposite amount, within 60 days):
+   1. {date} | {description}
+   2. {date} | {description}
+   ...
+   ```
+   Parse failure → treat as "none".
+
+   **Manual pair JSON schema**
+   ```json
+   [
+     {
+       "refund": {"date": "2026-04-16", "source": "chase_freedom_flex", "amount": -116.09, "description": "AMAZON MKTPLACE PMTS"},
+       "charge": {"date": "2026-04-10", "source": "chase_freedom_flex", "amount": 116.09, "description": "AMAZON MKTPL*BY0UT71L2"}
+     }
+   ]
+   ```
+   Rows are located by `(date_iso, source, round(amount, 2), description)` 4-tuple.
+
+   **UI changes in `app.py`** (Refunds & credits expander)
+   - Two `st.selectbox` controls (unpaired refund + same-source same-amount candidate charge) plus a "Pin pair" button → appends to `config/manual_refund_pairs.json`, then `st.cache_data.clear()` + `st.rerun()`.
+   - List of currently pinned pairs with an "Unpin" control per row.
+
+   **Verification**
+   1. Delete `data/transactions.parquet` and `data/refund_pair_cache.json`. Run `uv run streamlit run app.py`.
+   2. Amazon case: in Refunds & credits, the 4/16 -$116.09 row should now have a non-empty `refund_pair_id`. The 4/10 +$116.09 row should disappear from the Transactions table (filter Category=shopping). Top Total spend drops by ~$116.
+   3. Manual override: pin 4/16 refund → 4/8 charge instead. Confirm `config/manual_refund_pairs.json` is written. After rerun, 4/8 disappears from Transactions and 4/10 reappears.
+   4. No-API-key degradation: rename `.env` → `.env.bak`, restart. Dashboard must not error. Pass 1, 1.5, and 3 still work; multi-candidate refunds remain unpaired.
+   5. Cache hit: re-run with no input changes; verify zero LLM calls (temporarily print on each call to confirm) and that `data/refund_pair_cache.json` is unchanged.
+   6. Regression: spot-check the dashboard's Total spend delta vs. before this change matches the sum of newly-paired charges.
 
 ## Verification
 

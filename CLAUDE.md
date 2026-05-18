@@ -133,6 +133,7 @@ PayPal double-records every card-funded payment. Rules:
 - Need to make commit after each step get approved
 - Tell user what you have tested before you make any commitment.
 - Commit message should be simple and clear structured with one big change and several bullet points
+- Each bullet points should less than 10 words
 - Each bullet point in the commit body must be on its own line, separated from the next bullet by a blank line so they render as distinct paragraphs (not wrapped together).
 - Example:
 
@@ -154,3 +155,14 @@ PayPal double-records every card-funded payment. Rules:
 
 ## Update plan
 - Need to update plan.md every time you finish a task
+
+## Communication Rules
+
+- 请主要使用中文回复。对于关键技术概念、命令、文件名、API 名称、错误信息、设计模式、架构术语，请同时保留英文原文或在括号中给出英文。
+- 示例：
+  - 依赖注入（Dependency Injection）
+  - 中间件（middleware）
+  - 类型检查（type checking）
+  - 运行 `npm run build`
+  - 编辑 `src/app.ts`
+- 默认解释用中文；关键概念第一次出现时使用「中文（English）」格式。后续如果概念已经清楚，可以只用中文或英文原词。
